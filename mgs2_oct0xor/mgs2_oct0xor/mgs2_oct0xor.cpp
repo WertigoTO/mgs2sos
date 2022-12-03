@@ -318,6 +318,8 @@ int CameraResetButtonTapCountdown = 0;
 bool CameraResetButtonHeld = false;
 
 bool BladeAttack = false;
+bool BladeAttackVertical = false;
+bool BladeAttackHorizontal = false;
 bool BladeSpecialAttack = false;
 WORD BladeDirection = 0;
 
@@ -1333,15 +1335,28 @@ extern "C" __declspec(dllexport) void __cdecl convert_stick_to_button(void* arg0
 	}
 
 	BladeAttack = false;
+	BladeAttackVertical = false;
+	BladeAttackHorizontal = false;
 	BladeSpecialAttack = false;
 	BladeDirection = 0;
 	if (IsEnabled && active_weapon_id == WEAPON_HF_BLADE)
 	{
 		bool flag = false;
-		if (buttons & B)
+		if (buttons & B && buttons & L1)
 		{
 			buttons &= ~B;
+			buttons &= ~L1;
 			BladeAttack = true;
+			BladeAttackVertical = true;
+			flag = true;
+		}
+
+		if (buttons & X && buttons & L1)
+		{
+			buttons &= ~X;
+			buttons &= ~L1;
+			BladeAttack = true;
+			BladeAttackHorizontal = true;
 			flag = true;
 		}
 
@@ -2085,7 +2100,21 @@ extern "C" __declspec(dllexport) WORD __cdecl get_blade_direction(void* a1)
 		{
 			if (BladeDirection == 0)
 			{
-				BladeDirection = get_rand() & 0xFFF;
+				if (BladeAttackVertical)
+				{
+					if (get_rand() > 0x4000)
+						BladeDirection = 0x0000;
+					else
+						BladeDirection = 0x0800;
+				}
+
+				if (BladeAttackHorizontal)
+				{
+					if (get_rand() > 0x4000)
+						BladeDirection = 0x0400;
+					else
+						BladeDirection = 0x0C00;
+				}
 			}
 
 			return BladeDirection;
