@@ -314,6 +314,8 @@ bool FromFpsMode = false;
 bool PlayerModelIsHidden = false;
 
 int CameraResetButtonCountdown = 0;
+int CameraResetButtonTapCountdown = 0;
+bool CameraResetButtonHeld = false;
 
 bool BladeAttack = false;
 bool BladeSpecialAttack = false;
@@ -1289,24 +1291,33 @@ extern "C" __declspec(dllexport) void __cdecl convert_stick_to_button(void* arg0
 	//}
 
 	// In MGS3 L1 - resets camera, R1 - is FPS view, L2 - items, R2 - weapons
-		// In MGS2 all the same but L1 is unused - we need to use it
-		// L1 and double tap L1 have different effects, double tap also resets Z
-		// But there is a catch: it interferences with blade protection stance
-	if (PrevButtons != buttons && buttons == L1) 
+		// In MGS2 we want the same controls, but since it interferences with blade protection stance 
+		//	and third person autoaim we must check for tapped button
+		// Tap L1 and double tap L1 have different effects, double tap also resets Z
+	if (!CameraResetButtonHeld && buttons & L1)
 	{
-		if (IsEnabled && !IsPaddemo && *(DWORD*)PL_Object != NULL && active_weapon_id != WEAPON_HF_BLADE)
+		CameraResetButtonHeld = true;
+		CameraResetButtonTapCountdown = 15;
+	} 
+	else if (CameraResetButtonHeld && !(buttons & L1))
+	{
+		CameraResetButtonHeld = false;
+		if (CameraResetButtonTapCountdown > 0)
 		{
-			WORD direction = *(WORD*)(*(DWORD*)PL_Object + 0x6A) << 4;
-			NewTpsCamera.direction = direction;
+			if (IsEnabled && !IsPaddemo && *(DWORD*)PL_Object != NULL)
+			{
+				WORD direction = *(WORD*)(*(DWORD*)PL_Object + 0x6A) << 4;
+				NewTpsCamera.direction = direction;
 
-			if (CameraResetButtonCountdown > 0)
-			{
-				NewTpsCamera.z_value = 0.6666667;
-				CameraResetButtonCountdown = 0;
-			}
-			else 
-			{
-				CameraResetButtonCountdown = 60;
+				if (CameraResetButtonCountdown > 0)
+				{
+					NewTpsCamera.z_value = 0.6666667;
+					CameraResetButtonCountdown = 0;
+				}
+				else
+				{
+					CameraResetButtonCountdown = 60;
+				}
 			}
 		}
 	}
@@ -1314,6 +1325,11 @@ extern "C" __declspec(dllexport) void __cdecl convert_stick_to_button(void* arg0
 	if (CameraResetButtonCountdown > 0)
 	{
 		CameraResetButtonCountdown--;
+	}
+
+	if (CameraResetButtonTapCountdown > 0)
+	{
+		CameraResetButtonTapCountdown--;
 	}
 
 	BladeAttack = false;
